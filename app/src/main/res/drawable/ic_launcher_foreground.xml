@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- ear -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M50,30c-9.4,0 -17,7.6 -17,17c0,5 2,8.5 4.6,11.6c2.3,2.7 3.4,4.4 3.4,7.4c0,4.4 3.6,8 8,8s8,-3.6 8,-8h-5c0,1.7 -1.3,3 -3,3s-3,-1.3 -3,-3c0,-4.8 -2,-7.6 -4.6,-10.6C39.9,52.6 38,50.3 38,47c0,-6.6 5.4,-12 12,-12s12,5.4 12,12h5C67,37.6 59.4,30 50,30z" />
+    <!-- vibration waves -->
+    <path android:fillColor="#FFD54F"
+        android:pathData="M72,38l4,-2c2.6,5.4 2.6,16.6 0,22l-4,-2c2.1,-4.4 2.1,-13.6 0,-18zM79,34l4,-2c4,8 4,22 0,30l-4,-2c3.4,-6.8 3.4,-19.2 0,-26z" />
+</vector>

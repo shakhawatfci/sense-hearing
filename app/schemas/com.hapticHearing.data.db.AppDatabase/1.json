@@ -1,0 +1,368 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "86cf2ec5a1c816d65e8ca540f41d8954",
+    "entities": [
+      {
+        "tableName": "Person",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `relation` TEXT NOT NULL, `photoPath` TEXT, `patternId` TEXT NOT NULL, `isSelf` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relation",
+            "columnName": "relation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "photoPath",
+            "columnName": "photoPath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "patternId",
+            "columnName": "patternId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSelf",
+            "columnName": "isSelf",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "VoiceSample",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personId` INTEGER NOT NULL, `wavPath` TEXT NOT NULL, `embedding` BLOB NOT NULL, `embedderId` TEXT NOT NULL, `kind` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`personId`) REFERENCES `Person`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personId",
+            "columnName": "personId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wavPath",
+            "columnName": "wavPath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "embedding",
+            "columnName": "embedding",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "embedderId",
+            "columnName": "embedderId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_VoiceSample_personId",
+            "unique": false,
+            "columnNames": [
+              "personId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_VoiceSample_personId` ON `${TABLE_NAME}` (`personId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "Person",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "NameTemplate",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `speakerPersonId` INTEGER, `wavPath` TEXT NOT NULL, `mfcc` BLOB NOT NULL, `frames` INTEGER NOT NULL, FOREIGN KEY(`speakerPersonId`) REFERENCES `Person`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speakerPersonId",
+            "columnName": "speakerPersonId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "wavPath",
+            "columnName": "wavPath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mfcc",
+            "columnName": "mfcc",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frames",
+            "columnName": "frames",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_NameTemplate_speakerPersonId",
+            "unique": false,
+            "columnNames": [
+              "speakerPersonId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_NameTemplate_speakerPersonId` ON `${TABLE_NAME}` (`speakerPersonId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "Person",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "speakerPersonId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "SoundCategoryRule",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`categoryId` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `priority` TEXT NOT NULL, `patternId` TEXT NOT NULL, `minConfidence` REAL NOT NULL, `cooldownSec` INTEGER NOT NULL, PRIMARY KEY(`categoryId`))",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priority",
+            "columnName": "priority",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "patternId",
+            "columnName": "patternId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minConfidence",
+            "columnName": "minConfidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cooldownSec",
+            "columnName": "cooldownSec",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "categoryId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "EventLog",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `time` INTEGER NOT NULL, `type` TEXT NOT NULL, `label` TEXT NOT NULL, `personId` INTEGER, `confidence` REAL NOT NULL, `levelDb` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personId",
+            "columnName": "personId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "levelDb",
+            "columnName": "levelDb",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_EventLog_time",
+            "unique": false,
+            "columnNames": [
+              "time"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_EventLog_time` ON `${TABLE_NAME}` (`time`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "CustomPattern",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `timings` TEXT NOT NULL, `amplitudes` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timings",
+            "columnName": "timings",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amplitudes",
+            "columnName": "amplitudes",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '86cf2ec5a1c816d65e8ca540f41d8954')"
+    ]
+  }
+}
