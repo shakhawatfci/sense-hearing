@@ -24,6 +24,8 @@ data class AppSettings(
     val noiseMarginDb: Float = 8f,
     val vibrationStrength: Float = 1f,
     val continuousEnabled: Boolean = true,
+    /** true = vibration follows the sound's loudness envelope; false = pitch → pulse rhythm. */
+    val naturalFeel: Boolean = false,
     val speakerThreshold: Float = 0.50f,
     /** Negative = not calibrated yet (set automatically during name setup, M6). */
     val nameThreshold: Float = -1f,
@@ -68,6 +70,7 @@ class SettingsRepository @Inject constructor(
             prefs[K.noiseMarginDb] = s.noiseMarginDb
             prefs[K.vibrationStrength] = s.vibrationStrength
             prefs[K.continuousEnabled] = s.continuousEnabled
+            prefs[K.naturalFeel] = s.naturalFeel
             prefs[K.speakerThreshold] = s.speakerThreshold
             prefs[K.nameThreshold] = s.nameThreshold
             prefs[K.calibrationOffset] = s.calibrationOffset
@@ -91,6 +94,7 @@ class SettingsRepository @Inject constructor(
             noiseMarginDb = this[K.noiseMarginDb] ?: d.noiseMarginDb,
             vibrationStrength = this[K.vibrationStrength] ?: d.vibrationStrength,
             continuousEnabled = this[K.continuousEnabled] ?: d.continuousEnabled,
+            naturalFeel = this[K.naturalFeel] ?: d.naturalFeel,
             speakerThreshold = this[K.speakerThreshold] ?: d.speakerThreshold,
             nameThreshold = this[K.nameThreshold] ?: d.nameThreshold,
             calibrationOffset = this[K.calibrationOffset] ?: d.calibrationOffset,
@@ -112,6 +116,7 @@ class SettingsRepository @Inject constructor(
         val noiseMarginDb = floatPreferencesKey("noiseMarginDb")
         val vibrationStrength = floatPreferencesKey("vibrationStrength")
         val continuousEnabled = booleanPreferencesKey("continuousEnabled")
+        val naturalFeel = booleanPreferencesKey("naturalFeel")
         val speakerThreshold = floatPreferencesKey("speakerThreshold")
         val nameThreshold = floatPreferencesKey("nameThreshold")
         val calibrationOffset = floatPreferencesKey("calibrationOffset")

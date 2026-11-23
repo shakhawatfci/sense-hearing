@@ -5,6 +5,19 @@ import android.media.AudioManager
 import android.os.SystemClock
 import com.hapticHearing.audio.AudioEngine
 import com.hapticHearing.audio.MicState
+import com.hapticHearing.data.db.EventLog
+import com.hapticHearing.data.db.EventLogDao
+import com.hapticHearing.events.ArbiterEvent
+import com.hapticHearing.events.EventArbiter
+import com.hapticHearing.events.EventPriority
+import com.hapticHearing.haptics.VibrationPatterns
+import com.hapticHearing.ml.SoundAlert
+import com.hapticHearing.ml.SoundCategoryTable
+import com.hapticHearing.ml.SoundDetection
+import com.hapticHearing.ml.SoundEventDetector
+import com.hapticHearing.ml.SoundModelFactory
+import com.hapticHearing.ml.SoundPriority
+import android.util.Log
 import com.hapticHearing.data.settings.AppSettings
 import com.hapticHearing.data.settings.SettingsRepository
 import com.hapticHearing.dsp.DspConfig
@@ -14,12 +27,15 @@ import com.hapticHearing.haptics.ContinuousHaptics
 import com.hapticHearing.haptics.ContinuousOutput
 import com.hapticHearing.haptics.HapticConfig
 import com.hapticHearing.haptics.HapticMapper
+import com.hapticHearing.haptics.NaturalHaptics
 import com.hapticHearing.haptics.VibrationEngine
 import com.hapticHearing.haptics.Waveform
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +62,10 @@ data class LiveState(
     val minDb: Float = 50f,
     val vibrating: Boolean = false,
     val hasSignal: Boolean = false,
+    /** Latest recognised sound (voice, vehicle, bird, doorbell…), null when nothing for 8 s. */
+    val nowHearing: SoundDetection? = null,
+    /** False if the sound model could not be loaded on this device. */
+    val recognitionAvailable: Boolean = true,
 ) {
     val isOn: Boolean get() = status != ListeningStatus.OFF
 }
@@ -60,14 +80,29 @@ class HearingPipeline @Inject constructor(
     private val audio: AudioEngine,
     private val vibration: VibrationEngine,
     private val settingsRepository: SettingsRepository,
+    private val soundModelFactory: SoundModelFactory,
+    private val eventLogDao: EventLogDao,
 ) {
     private val dsp = DspProcessor()
     private val mapper = HapticMapper()
-    private val continuous = ContinuousHaptics(object : ContinuousOutput {
+    private val motorOutput = object : ContinuousOutput {
         override val hasAmplitudeControl get() = vibration.hasAmplitudeControl
         override fun play(waveform: Waveform) = vibration.playContinuous(waveform)
         override fun stop() = vibration.stopContinuous()
-    })
+    }
+    private val continuous = ContinuousHaptics(motorOutput)
+
+    /** Natural feel: fast attack, short release so gaps between syllables come through. */
+    private val naturalMapper = HapticMapper(attackMs = 5f, releaseMs = 40f)
+    private val natural = NaturalHaptics(motorOutput)
+    @Volatile private var naturalFeel = false
+
+    private val arbiter = EventArbiter()
+    private val table: SoundCategoryTable by lazy { soundModelFactory.table() }
+    private val detector by lazy { SoundEventDetector(table) }
+
+    /** Loudest overall level (dBFS) since the last classification window. */
+    @Volatile private var windowMaxDbfs = -120f
 
     private val _live = MutableStateFlow(LiveState())
     val live: StateFlow<LiveState> = _live.asStateFlow()
@@ -103,6 +138,7 @@ class HearingPipeline @Inject constructor(
                     }
                 }
             }
+            launch { classifyLoop(this) }
             audio.chunks
                 .onSubscription { dsp.reset() }
                 .collect { chunk -> dsp.process(chunk) { onFrame(it) } }
@@ -126,10 +162,14 @@ class HearingPipeline @Inject constructor(
 
     private fun resetOutput() {
         continuous.reset()
+        natural.reset()
+        naturalMapper.reset()
+        arbiter.reset()
+        detector.reset()
         mapper.reset()
         dsp.reset()
         vibration.cancelAll()
-        _live.update { it.copy(vibrating = false, active = listOf(false, false, false), hasSignal = false) }
+        _live.update { it.copy(vibrating = false, active = listOf(false, false, false), hasSignal = false, nowHearing = null) }
     }
 
     private fun applySettings(s: AppSettings) {
@@ -140,6 +180,12 @@ class HearingPipeline @Inject constructor(
             thresholdDbfs = s.thresholdDbfs,
             noiseMarginDb = s.noiseMarginDb,
         )
+        if (s.naturalFeel != naturalFeel) {
+            // Switching modes: let the other driver release the motor.
+            continuous.reset()
+            natural.reset()
+            naturalFeel = s.naturalFeel
+        }
         hapticConfig = HapticConfig(
             userStrength = s.vibrationStrength,
             continuousEnabled = s.continuousEnabled && !s.quietMode,
@@ -148,8 +194,10 @@ class HearingPipeline @Inject constructor(
 
     private fun onFrame(frame: DspFrame) {
         val now = SystemClock.uptimeMillis()
-        val haptic = mapper.map(frame, hapticConfig)
-        continuous.onFrame(haptic, now)
+        val haptic = if (naturalFeel) naturalMapper.map(frame, hapticConfig) else mapper.map(frame, hapticConfig)
+        if (frame.overallDbfs > windowMaxDbfs) windowMaxDbfs = frame.overallDbfs
+        arbiter.poll(now)?.let { vibration.playPattern(it.pattern, settings.vibrationStrength.coerceAtLeast(0.3f)) }
+        if (naturalFeel) natural.onFrame(haptic, now) else continuous.onFrame(haptic, now)
         dsp.selfVibrationGuard = vibration.isMotorRunning(now)
 
         if (frame.timeNanos - lastUiNanos >= UI_INTERVAL_NANOS) {
@@ -165,6 +213,63 @@ class HearingPipeline @Inject constructor(
                     minDb = settings.minDb,
                     vibrating = haptic.isOn,
                     hasSignal = true,
+                )
+            }
+        }
+    }
+
+    /** YAMNet every 0.5 s (1 s in battery saver) on the last 0.975 s of audio (spec §6). */
+    private suspend fun classifyLoop(scope: CoroutineScope) {
+        val model = try {
+            soundModelFactory.create().also { table }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Sound model unavailable", e)
+            _live.update { it.copy(recognitionAvailable = false) }
+            return
+        }
+        try {
+            while (scope.isActive) {
+                delay(if (settings.batterySaver) 1000 else 500)
+                if (audio.state.value != MicState.RUNNING) continue
+                if (audio.ring.totalWritten < model.windowSamples) continue
+                val samples = audio.ring.readLast(model.windowSamples)
+                val levelPassed = windowMaxDbfs >= settings.thresholdDbfs
+                windowMaxDbfs = -120f
+                val labels = model.classify(samples)
+                val now = SystemClock.uptimeMillis()
+                val out = detector.onWindow(table.score(labels), levelPassed, now)
+                _live.update { it.copy(nowHearing = out.display) }
+                out.alerts.forEach { alert(it, now, scope) }
+            }
+        } finally {
+            withContext(NonCancellable) { model.close() }
+        }
+    }
+
+    private fun alert(a: SoundAlert, now: Long, scope: CoroutineScope) {
+        val s = settings
+        if (s.quietMode && a.priority != SoundPriority.DANGER) return
+        val priority = when (a.priority) {
+            SoundPriority.DANGER -> EventPriority.DANGER
+            SoundPriority.HIGH -> EventPriority.HIGH
+            else -> EventPriority.NORMAL
+        }
+        val pattern = VibrationPatterns.byId(a.patternId) ?: VibrationPatterns.GENERAL
+        arbiter.submit(ArbiterEvent(a.categoryId, priority, pattern), now)?.let {
+            vibration.playPattern(it.pattern, s.vibrationStrength.coerceAtLeast(0.3f))
+        }
+        val levelDb = _live.value.overallDb
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                eventLogDao.insert(
+                    EventLog(
+                        time = System.currentTimeMillis(),
+                        type = "SOUND",
+                        label = a.categoryId,
+                        personId = null,
+                        confidence = a.confidence,
+                        levelDb = levelDb,
+                    ),
                 )
             }
         }
@@ -193,6 +298,7 @@ class HearingPipeline @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "HearingPipeline"
         const val UI_INTERVAL_NANOS = 33_000_000L
     }
 }

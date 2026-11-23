@@ -18,6 +18,19 @@ android {
         versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    splits {
+        // One APK per CPU type (MediaPipe native libs are ~30 MB per ABI).
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+    androidResources {
+        // MediaPipe memory-maps the model; it must be stored uncompressed.
+        noCompress += "tflite"
+    }
 
     buildTypes {
         release {
@@ -68,6 +81,9 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 
+    implementation(libs.mediapipe.tasks.audio)
+
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
     testImplementation(libs.kotlinx.coroutines.test)
 }

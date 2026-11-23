@@ -51,3 +51,28 @@ Changes from `HAPTIC_HEARING_APP_PLAN.md`, or choices the plan left open.
   default setting stays 100–8000 Hz as the plan says.
 - Calibration averages the louder half of 3 s of readings while the user talks (speech has pauses) and sets
   `offset = 60 − level`.
+
+## Sound recognition (§6, M4)
+- MediaPipe `tasks-audio` 1.2.3 (latest on Google Maven), `AUDIO_CLIPS` mode on the last 15 600 samples
+  (0.975 s) from the ring buffer, every 0.5 s (1 s with battery saver).
+- MediaPipe's manifest adds `INTERNET` and `ACCESS_NETWORK_STATE`; both are removed with `tools:node="remove"`.
+- Extra **display-only (INFO)** categories, beyond the plan's table: voice (speech), laughter, clapping, vehicle,
+  truck/bus, train, aircraft, bird, plus music, which is display-only rather than a LOW alert. They show an icon in
+  "Now hearing" but never vibrate a pattern or go into History. The plan's alert categories keep their priorities
+  and patterns.
+- The debounce (2 of 3 windows) also drives the display, so the icon doesn't flicker. It stays up 8 s after the
+  sound stops. DANGER categories skip the "above the dB threshold" check (favour false alarms over misses).
+- Material Icons has no bird icon, so a simple bird silhouette is drawn in code (`SoundIcons.Bird`).
+- Debug APKs are split per ABI (arm64-v8a / armeabi-v7a / x86_64): MediaPipe's native libs are about 30 MB per ABI.
+
+## Natural feel mode (added after reviewing os6/nospeaker)
+- nospeaker drives a Mac trackpad's Taptic Engine with arbitrary sine frequencies through a private macOS API.
+  Android has no equivalent on most phones: frequency control (`WaveformEnvelopeBuilder`) exists only from API 36,
+  on a few devices. Skin also can't tell frequencies apart above about 500 Hz. So the idea we borrowed is
+  **following the sound's envelope over time**, not its frequency.
+- Settings → "How sounds feel": **Rhythm** (default, pitch → pulse speed) or **Natural feel**. Natural feel uses a
+  `HapticMapper` with 5 ms attack / 40 ms release. It resends a 48 ms waveform every 32 ms, or immediately on a
+  change of ≥ 12 % or an onset. An onset (a rise of ≥ 0.25 in one frame) starts with a 20 ms strong tap. Without
+  amplitude control the strength becomes a 20 ms PWM duty cycle.
+- Not done yet: mapping pitch → motor frequency on API 36 devices with envelope support. It needs
+  compileSdk 36 and an AGP upgrade, and wouldn't help the Realme C55 test phone.

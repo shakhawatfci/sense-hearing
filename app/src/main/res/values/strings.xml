@@ -33,7 +33,43 @@
     <string name="threshold_line">Your minimum loudness</string>
     <string name="noise_floor">Background noise</string>
     <string name="now_hearing">Now hearing</string>
-    <string name="now_hearing_empty">Sound recognition arrives in a later update. You will still feel every sound.</string>
+    <string name="now_hearing_empty">Nothing recognised right now. Turn on Listening to see what you hear.</string>
+    <string name="now_hearing_quiet">Listening… no sound recognised yet.</string>
+    <string name="now_hearing_unavailable">Sound recognition is not available on this phone. You will still feel every sound.</string>
+    <string name="confidence_sure">%1$d%% sure</string>
+    <string name="confidence_probably">probably · %1$d%%</string>
+    <string name="seconds_ago">%1$d s ago</string>
+    <string name="just_now">now</string>
+    <string name="alert_badge">Alert</string>
+
+    <!-- Sound categories -->
+    <string name="cat_fire_alarm">Fire / smoke alarm</string>
+    <string name="cat_siren">Siren</string>
+    <string name="cat_car_horn">Car horn</string>
+    <string name="cat_glass">Glass breaking</string>
+    <string name="cat_baby_cry">Baby crying</string>
+    <string name="cat_doorbell">Doorbell</string>
+    <string name="cat_knock">Knock</string>
+    <string name="cat_phone">Phone ringing</string>
+    <string name="cat_alarm_clock">Alarm clock / beep</string>
+    <string name="cat_dog">Dog</string>
+    <string name="cat_cat">Cat</string>
+    <string name="cat_water">Water running</string>
+    <string name="cat_kitchen">Microwave / kettle</string>
+    <string name="cat_speech">Someone is talking</string>
+    <string name="cat_laughter">Laughter</string>
+    <string name="cat_clapping">Clapping</string>
+    <string name="cat_vehicle">Vehicle</string>
+    <string name="cat_truck">Truck / bus</string>
+    <string name="cat_train">Train</string>
+    <string name="cat_aircraft">Aircraft</string>
+    <string name="cat_bird">Bird</string>
+    <string name="cat_music">Music</string>
+    <string name="cat_unknown">Sound</string>
+
+    <!-- History -->
+    <string name="history_empty">No alerts yet. Doorbell, alarms, baby crying and other alert sounds will appear here.</string>
+    <string name="history_clear">Clear all</string>
     <string name="chip_quiet_mode">Quiet mode (danger only)</string>
     <string name="chip_sensitivity">Sensitivity</string>
     <string name="mic_permission_rationale">Haptic Hearing needs the microphone to turn sounds into vibration. Audio never leaves your phone.</string>
@@ -54,6 +90,11 @@
     <string name="settings_noise_margin_desc">How much louder than the background a sound must be. Higher = ignores more.</string>
     <string name="settings_vibration_strength">Vibration strength</string>
     <string name="settings_continuous">Feel every sound</string>
+    <string name="settings_feel_mode">How sounds feel</string>
+    <string name="feel_rhythm">Rhythm</string>
+    <string name="feel_rhythm_desc">Pitch becomes pulse speed: low = slow pulses, voice = medium, high = fast buzz.</string>
+    <string name="feel_natural">Natural feel</string>
+    <string name="feel_natural_desc">Vibration follows the sound itself. You feel syllables, knocks, barks and beats as they happen.</string>
     <string name="settings_continuous_desc">Off = vibrate only for recognised events.</string>
     <string name="settings_calibration">Calibration</string>
     <string name="settings_calibration_desc">Talk normally about 1 m from the phone (about 60 dB), then tap the button. Keep talking for 3 seconds.</string>

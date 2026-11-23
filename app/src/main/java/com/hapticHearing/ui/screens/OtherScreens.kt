@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FamilyRestroom
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -67,14 +66,6 @@ fun SoundsScreen() = ComingSoon(
     Icons.Filled.NotificationsActive,
     stringResource(R.string.nav_sounds),
     stringResource(R.string.sounds_placeholder),
-    "M4",
-)
-
-@Composable
-fun HistoryScreen() = ComingSoon(
-    Icons.Filled.History,
-    stringResource(R.string.nav_history),
-    stringResource(R.string.history_placeholder),
     "M4",
 )
 

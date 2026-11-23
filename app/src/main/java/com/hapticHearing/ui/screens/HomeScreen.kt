@@ -66,6 +66,13 @@ import com.hapticHearing.service.ServiceController
 import com.hapticHearing.ui.components.BandMeter
 import com.hapticHearing.ui.components.BandMeterLegend
 import com.hapticHearing.ui.components.HSpace
+import com.hapticHearing.ui.components.SoundIcons
+import com.hapticHearing.ui.theme.LocalBandColors
+import com.hapticHearing.ml.SoundPriority
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
@@ -134,8 +141,8 @@ fun HomeScreen(onOpenSettings: () -> Unit, vm: HomeViewModel = hiltViewModel()) 
             MicPermissionCard(onRetry = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) })
         }
 
+        NowHearingCard(live)
         LevelCard(live, settings)
-        NowHearingCard()
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
@@ -234,15 +241,80 @@ private fun LevelCard(live: LiveState, settings: AppSettings) {
     }
 }
 
+/**
+ * "Now hearing": a big icon + name for the latest recognised sound (voice, vehicle, bird, doorbell…).
+ * Stays while the sound continues and fades 8 s after it stops.
+ */
 @Composable
-private fun NowHearingCard() {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
+private fun NowHearingCard(live: LiveState) {
+    val d = live.nowHearing
+    val isAlert = d != null && d.priority in setOf(SoundPriority.DANGER, SoundPriority.HIGH)
+    val isDanger = d?.priority == SoundPriority.DANGER
+    val container = when {
+        isDanger -> MaterialTheme.colorScheme.errorContainer
+        isAlert -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = container),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.now_hearing), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.now_hearing_empty), style = MaterialTheme.typography.bodyMedium)
+            Crossfade(targetState = d?.categoryId, label = "nowHearing") { id ->
+                if (id == null || d == null) {
+                    Text(
+                        stringResource(
+                            when {
+                                !live.recognitionAvailable -> R.string.now_hearing_unavailable
+                                live.status == ListeningStatus.LISTENING -> R.string.now_hearing_quiet
+                                else -> R.string.now_hearing_empty
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.heightIn(min = 96.dp),
+                    )
+                } else {
+                    val name = stringResource(SoundIcons.name(id))
+                    val pct = (d.confidence * 100).roundToInt()
+                    val conf = stringResource(if (d.confidence >= 0.6f) R.string.confidence_sure else R.string.confidence_probably, pct)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .background(MaterialTheme.colorScheme.surface, CircleShape),
+                        ) {
+                            Icon(
+                                SoundIcons.icon(id),
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = if (isDanger) LocalBandColors.current.danger else MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        HSpace(16)
+                        Column(Modifier.weight(1f)) {
+                            if (isAlert) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Text(" " + stringResource(R.string.alert_badge), style = MaterialTheme.typography.labelLarge)
+                                }
+                            }
+                            Text(name, style = MaterialTheme.typography.headlineMedium)
+                            Text(conf, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
 
 @Composable
 private fun MicPermissionCard(onRetry: () -> Unit) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -218,6 +220,19 @@ fun SettingsScreen(onOpenHelp: () -> Unit, vm: SettingsViewModel = hiltViewModel
                 label = stringResource(R.string.settings_vibration_strength),
                 valueText = { context.getString(R.string.unit_percent, (it * 100).roundToInt()) },
             )
+            Text(stringResource(R.string.settings_feel_mode), style = MaterialTheme.typography.bodyLarge)
+            FeelModeOption(
+                selected = !s.naturalFeel,
+                title = stringResource(R.string.feel_rhythm),
+                description = stringResource(R.string.feel_rhythm_desc),
+                onSelect = { vm.update { it.copy(naturalFeel = false) } },
+            )
+            FeelModeOption(
+                selected = s.naturalFeel,
+                title = stringResource(R.string.feel_natural),
+                description = stringResource(R.string.feel_natural_desc),
+                onSelect = { vm.update { it.copy(naturalFeel = true) } },
+            )
             ToggleRow(
                 title = stringResource(R.string.settings_continuous),
                 description = stringResource(R.string.settings_continuous_desc),
@@ -285,6 +300,23 @@ private fun FrequencyRange(minHz: Float, maxHz: Float, onCommit: (Float, Float) 
 }
 
 private fun round10(hz: Float): Int = ((hz / 10f).roundToInt() * 10).coerceIn(50, 8000)
+
+@Composable
+private fun FeelModeOption(selected: Boolean, title: String, description: String, onSelect: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f).padding(start = 8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
 
 @Composable
 fun ToggleRow(title: String, description: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
